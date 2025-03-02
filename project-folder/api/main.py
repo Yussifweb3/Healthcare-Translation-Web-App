@@ -37,6 +37,11 @@ LANGUAGE_MAPPING = {
     "tr": "Turkish"
 }
 
+# Root Route
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Healthcare Translation Web App!"}
+
 @app.post("/translate/")
 async def translate_and_speak(
     text: str = Form(...),
@@ -44,6 +49,10 @@ async def translate_and_speak(
     output_lang_code: str = Form(...)
 ):
     try:
+        # Validate language codes
+        if input_lang_code not in LANGUAGE_MAPPING or output_lang_code not in LANGUAGE_MAPPING:
+            return JSONResponse({"error": "Invalid language code"}, status_code=400)
+
         # Translate Text
         translator = Translator()
         translated_text = translator.translate(text, src=input_lang_code, dest=output_lang_code).text
@@ -59,11 +68,12 @@ async def translate_and_speak(
             with open(temp_audio.name, "wb") as file:
                 file.write(encrypted_data)
 
-        return JSONResponse({
-            "original_text": text,
-            "translated_text": translated_text,
-            "audio_file": temp_audio.name
-        })
+            # Return the file path (temporary for now)
+            return JSONResponse({
+                "original_text": text,
+                "translated_text": translated_text,
+                "audio_file": temp_audio.name
+            })
 
     except Exception as e:
         logging.error(f"Error during translation: {e}")
@@ -79,7 +89,10 @@ async def serve_audio(filename: str):
         with open(decrypted_path, "wb") as file:
             file.write(cipher.decrypt(encrypted_data))
 
-        return FileResponse(decrypted_path, media_type="audio/mp3")
+        # Serve the file and clean up afterward
+        response = FileResponse(decrypted_path, media_type="audio/mp3")
+        os.remove(decrypted_path)  # Clean up the decrypted file
+        return response
     except Exception as e:
         logging.error(f"Error decrypting audio: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
