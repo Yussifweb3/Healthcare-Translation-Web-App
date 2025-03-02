@@ -1,10 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/main.py", "use": "@vercel/python" }
+    {
+      "src": "api/main.py",
+      "use": "@vercel/python"
+    }
   ],
   "routes": [
-    { "src": "/translate", "dest": "/api/main.translate_and_speak" },
-    { "src": "/audio/(.*)", "dest": "/api/main.serve_audio" }
+    {
+      "src": "/(.*)",
+      "dest": "api/main.py"
+    }
   ]
 }
+
