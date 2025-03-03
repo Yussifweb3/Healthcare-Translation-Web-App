@@ -1,1 +1,54 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare Translation App</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <h1>Healthcare Translation App</h1>
+    <form id="translationForm">
+        <label for="text">Enter Text:</label><br>
+        <textarea id="text" name="text" rows="4" cols="50"></textarea><br><br>
+
+        <label for="input_lang_code">Input Language Code (e.g., en):</label><br>
+        <input type="text" id="input_lang_code" name="input_lang_code"><br><br>
+
+        <label for="output_lang_code">Output Language Code (e.g., es):</label><br>
+        <input type="text" id="output_lang_code" name="output_lang_code"><br><br>
+
+        <button type="submit">Translate</button>
+    </form>
+
+    <h2>Translated Text:</h2>
+    <p id="translatedText"></p>
+
+    <h2>Audio:</h2>
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        document.getElementById('translationForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const response = await fetch('/translate/', {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            });
+
+            const data = await response.json();
+            document.getElementById('translatedText').innerText = data.translated_text;
+
+            // Play the audio file
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = `/audio/${data.audio_file.split('/').pop()}`;
+            audioPlayer.play();
+        });
+    </script>
+</body>
+</html>
