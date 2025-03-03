@@ -1,5 +1,6 @@
-from fastapi import FastAPI, UploadFile, Form
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from gtts import gTTS
 from googletrans import Translator
 from cryptography.fernet import Fernet
@@ -37,11 +38,16 @@ LANGUAGE_MAPPING = {
     "tr": "Turkish"
 }
 
-# Root Route
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Healthcare Translation Web App!"}
+# Serve static files (CSS, JS, etc.)
+app.mount("/static", StaticFiles(directory="."), name="static")
 
+# Root Route to Serve the HTML File
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    with open("index.html", "r") as file:
+        return HTMLResponse(content=file.read())
+
+# Translate and Speak Endpoint
 @app.post("/translate/")
 async def translate_and_speak(
     text: str = Form(...),
@@ -79,6 +85,7 @@ async def translate_and_speak(
         logging.error(f"Error during translation: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
+# Serve Audio Endpoint
 @app.get("/audio/{filename}")
 async def serve_audio(filename: str):
     try:
@@ -92,6 +99,7 @@ async def serve_audio(filename: str):
         # Serve the file and clean up afterward
         response = FileResponse(decrypted_path, media_type="audio/mp3")
         os.remove(decrypted_path)  # Clean up the decrypted file
+        os.remove(filename)  # Clean up the original encrypted file
         return response
     except Exception as e:
         logging.error(f"Error decrypting audio: {e}")
