@@ -16,7 +16,13 @@ form {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-textarea, input {
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+select, textarea, input {
     width: 100%;
     padding: 10px;
     margin-bottom: 10px;
