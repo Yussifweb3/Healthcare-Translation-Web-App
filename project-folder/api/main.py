@@ -7,6 +7,7 @@ from cryptography.fernet import Fernet
 import tempfile
 import logging
 import os
+import openai
 
 app = FastAPI()
 
@@ -20,6 +21,9 @@ logging.basicConfig(
 # Encryption Key for Audio
 encryption_key = Fernet.generate_key()
 cipher = Fernet(encryption_key)
+
+# OpenAI API Key
+openai.api_key = "your-openai-api-key"
 
 # Language Mapping
 LANGUAGE_MAPPING = {
@@ -47,6 +51,19 @@ async def read_root():
     with open("index.html", "r") as file:
         return HTMLResponse(content=file.read())
 
+# Enhance Transcription with OpenAI
+def enhance_transcription(text: str):
+    try:
+        response = openai.Completion.create(
+            engine="text-davinci-003",
+            prompt=f"Enhance the following medical transcription for accuracy: {text}",
+            max_tokens=100,
+        )
+        return response.choices[0].text.strip()
+    except Exception as e:
+        logging.error(f"Error enhancing transcription: {e}")
+        return text  # Fallback to original text if enhancement fails
+
 # Translate and Speak Endpoint
 @app.post("/translate/")
 async def translate_and_speak(
@@ -59,9 +76,12 @@ async def translate_and_speak(
         if input_lang_code not in LANGUAGE_MAPPING or output_lang_code not in LANGUAGE_MAPPING:
             return JSONResponse({"error": "Invalid language code"}, status_code=400)
 
+        # Enhance transcription using OpenAI
+        enhanced_text = enhance_transcription(text)
+
         # Translate Text
         translator = Translator()
-        translated_text = translator.translate(text, src=input_lang_code, dest=output_lang_code).text
+        translated_text = translator.translate(enhanced_text, src=input_lang_code, dest=output_lang_code).text
 
         # Generate Audio
         tts = gTTS(translated_text, lang=output_lang_code)
@@ -76,7 +96,7 @@ async def translate_and_speak(
 
             # Return the file path (temporary for now)
             return JSONResponse({
-                "original_text": text,
+                "original_text": enhanced_text,
                 "translated_text": translated_text,
                 "audio_file": temp_audio.name
             })
