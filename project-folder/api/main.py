@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from gtts import gTTS
@@ -25,23 +25,6 @@ cipher = Fernet(encryption_key)
 # OpenAI API Key
 openai.api_key = "your-openai-api-key"
 
-# Language Mapping
-LANGUAGE_MAPPING = {
-    "en": "English",
-    "es": "Spanish",
-    "fr": "French",
-    "de": "German",
-    "zh": "Chinese",
-    "ar": "Arabic",
-    "hi": "Hindi",
-    "it": "Italian",
-    "pt": "Portuguese",
-    "ru": "Russian",
-    "ja": "Japanese",
-    "ko": "Korean",
-    "tr": "Turkish"
-}
-
 # Serve static files (CSS, JS, etc.)
 app.mount("/static", StaticFiles(directory="."), name="static")
 
@@ -52,39 +35,37 @@ async def read_root():
         return HTMLResponse(content=file.read())
 
 # Enhance Transcription with OpenAI
-def enhance_transcription(text: str):
+@app.post("/enhance-transcription/")
+async def enhance_transcription(request: Request):
+    data = await request.json()
+    text = data.get("text")
+
     try:
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=f"Enhance the following medical transcription for accuracy: {text}",
             max_tokens=100,
         )
-        return response.choices[0].text.strip()
+        enhanced_text = response.choices[0].text.strip()
+        return {"enhanced_text": enhanced_text}
     except Exception as e:
         logging.error(f"Error enhancing transcription: {e}")
-        return text  # Fallback to original text if enhancement fails
+        return {"error": str(e)}
 
 # Translate and Speak Endpoint
 @app.post("/translate/")
 async def translate_and_speak(
     text: str = Form(...),
-    input_lang_code: str = Form(...),
-    output_lang_code: str = Form(...)
+    input_lang: str = Form(...),
+    output_lang: str = Form(...)
 ):
     try:
-        # Validate language codes
-        if input_lang_code not in LANGUAGE_MAPPING or output_lang_code not in LANGUAGE_MAPPING:
-            return JSONResponse({"error": "Invalid language code"}, status_code=400)
-
-        # Enhance transcription using OpenAI
-        enhanced_text = enhance_transcription(text)
-
         # Translate Text
         translator = Translator()
-        translated_text = translator.translate(enhanced_text, src=input_lang_code, dest=output_lang_code).text
+        translated_text = translator.translate(text, src=input_lang, dest=output_lang).text
 
         # Generate Audio
-        tts = gTTS(translated_text, lang=output_lang_code)
+        tts = gTTS(translated_text, lang=output_lang)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
             tts.save(temp_audio.name)
 
@@ -96,7 +77,6 @@ async def translate_and_speak(
 
             # Return the file path (temporary for now)
             return JSONResponse({
-                "original_text": enhanced_text,
                 "translated_text": translated_text,
                 "audio_file": temp_audio.name
             })
