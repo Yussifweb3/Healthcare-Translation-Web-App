@@ -18,8 +18,12 @@
         <label for="output_lang_code">Output Language Code (e.g., es):</label><br>
         <input type="text" id="output_lang_code" name="output_lang_code"><br><br>
 
+        <button type="button" id="startListening">Start Listening</button>
         <button type="submit">Translate</button>
     </form>
+
+    <h2>Original Transcript:</h2>
+    <p id="originalTranscript"></p>
 
     <h2>Translated Text:</h2>
     <p id="translatedText"></p>
@@ -28,7 +32,39 @@
     <audio id="audioPlayer" controls></audio>
 
     <script>
-        document.getElementById('translationForm').addEventListener('submit', async (event) => {
+        const startListeningButton = document.getElementById('startListening');
+        const originalTranscript = document.getElementById('originalTranscript');
+        const translationForm = document.getElementById('translationForm');
+        const translatedText = document.getElementById('translatedText');
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        let recognition;
+
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                document.getElementById('text').value = speechResult;
+                originalTranscript.innerText = speechResult;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+        } else {
+            startListeningButton.disabled = true;
+            console.error('Speech recognition not supported in this browser.');
+        }
+
+        startListeningButton.addEventListener('click', () => {
+            recognition.start();
+        });
+
+        translationForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
             const formData = new FormData(event.target);
@@ -41,10 +77,9 @@
             });
 
             const data = await response.json();
-            document.getElementById('translatedText').innerText = data.translated_text;
+            translatedText.innerText = data.translated_text;
 
             // Play the audio file
-            const audioPlayer = document.getElementById('audioPlayer');
             audioPlayer.src = `/audio/${data.audio_file.split('/').pop()}`;
             audioPlayer.play();
         });
