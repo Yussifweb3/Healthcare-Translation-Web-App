@@ -1,4 +1,3 @@
-
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
@@ -32,13 +31,14 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-right: 10px;
 }
 
 button:hover {
     background-color: #0056b3;
 }
 
-#translatedText {
+#originalTranscript, #translatedText {
     margin-top: 20px;
     font-size: 1.2em;
     color: #333;
